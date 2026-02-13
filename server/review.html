@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Review Application</title>
+  <!-- CodeMirror core -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/codemirror.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/theme/one-dark.min.css" />
+  <!-- CodeMirror addons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/fold/foldgutter.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/hint/show-hint.min.css" />
+  <!-- pdf.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.mjs" type="module"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'IBM Plex Mono', monospace;
+      background: #0a0a0a;
+      color: #fafafa;
+      min-height: 100vh;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.6;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 9999;
+      pointer-events: none;
+      opacity: 0.03;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      background-repeat: repeat;
+    }
+
+    /* ── Toolbar ─────────────────────────────────────────── */
+    .toolbar {
+      background: #111111;
+      border-bottom: 1px solid #262626;
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 44px;
+      flex-shrink: 0;
+    }
+    .toolbar-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .toolbar h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      color: #fafafa;
+    }
+    .toolbar .slug {
+      color: #525252;
+      font-weight: 400;
+      font-size: 13px;
+    }
+    .toolbar-right {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .btn {
+      padding: 6px 14px;
+      border: none;
+      border-radius: 0;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, opacity 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-compile {
+      background: #ff8a80;
+      color: #0a0a0a;
+      border: 1px solid #ff8a80;
+      font-family: 'IBM Plex Mono', monospace;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .btn-compile:hover {
+      background: transparent;
+      color: #ff8a80;
+    }
+    .btn-compile:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-secondary {
+      background: transparent;
+      border: 1px solid #262626;
+      color: #a3a3a3;
+    }
+    .btn-secondary:hover {
+      border-color: #ff8a80;
+      color: #ff8a80;
+    }
+
+    .status-pill {
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 0;
+      font-weight: 600;
+    }
+    .status-pill.compiling { background: rgba(255, 138, 128, 0.1); color: #ff8a80; }
+    .status-pill.success { background: rgba(255, 138, 128, 0.1); color: #ff8a80; }
+    .status-pill.error { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+
+    .toggle-label {
+      font-size: 0.75rem;
+      font-family: 'IBM Plex Mono', monospace;
+      color: #a3a3a3;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+    }
+    .toggle-label input { cursor: pointer; }
+
+    .kbd {
+      font-size: 10px;
+      background: #1a1a1a;
+      padding: 1px 5px;
+      border-radius: 0;
+      border: 1px solid #262626;
+      color: #525252;
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    /* ── Layout ──────────────────────────────────────────── */
+    .layout {
+      display: flex;
+      height: calc(100vh - 44px);
+    }
+
+    /* ── File tree sidebar ────────────────────────────────── */
+    .sidebar {
+      width: 180px;
+      background: #111111;
+      border-right: 1px solid #262626;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .sidebar-header {
+      padding: 10px 12px;
+      font-size: 0.65rem;
+      font-family: 'IBM Plex Mono', monospace;
+      font-weight: 500;
+      color: #525252;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      border-bottom: 1px solid #262626;
+    }
+    .file-list {
+      list-style: none;
+      flex: 1;
+      overflow-y: auto;
+    }
+    .file-item {
+      padding: 7px 12px;
+      font-size: 0.8rem;
+      font-family: 'IBM Plex Mono', monospace;
+      color: #a3a3a3;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.1s;
+      border-left: 2px solid transparent;
+    }
+    .file-item:hover { background: #1a1a1a; }
+    .file-item.active {
+      background: #1a1a1a;
+      color: #fafafa;
+      border-left: 2px solid #ff8a80;
+    }
+    .file-icon {
+      font-size: 13px;
+      width: 16px;
+      text-align: center;
+      flex-shrink: 0;
+      color: #525252;
+    }
+    .file-modified {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #ff8a80;
+      margin-left: auto;
+      flex-shrink: 0;
+      display: none;
+    }
+    .file-item.modified .file-modified { display: block; }
+
+    /* ── Editor panel ────────────────────────────────────── */
+    .editor-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      overflow: hidden;
+    }
+    .editor-pane {
+      flex: 1;
+      overflow: hidden;
+      background: #0a0a0a;
+    }
+    .editor-pane.hidden { display: none; }
+
+    .CodeMirror {
+      height: 100%;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12.5px;
+      line-height: 1.6;
+    }
+    .CodeMirror-gutters {
+      background: #111111;
+      border-right: 1px solid #262626;
+    }
+
+    .email-editor-wrap {
+      flex: 1;
+      overflow: hidden;
+    }
+    .email-editor-wrap.hidden { display: none; }
+    .email-editor {
+      width: 100%;
+      height: 100%;
+      background: #0a0a0a;
+      color: #fafafa;
+      border: none;
+      padding: 16px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12.5px;
+      line-height: 1.6;
+      resize: none;
+      outline: none;
+    }
+
+    /* ── Compile log ─────────────────────────────────────── */
+    .compile-log {
+      background: #0a0a0a;
+      border-top: 1px solid #262626;
+      flex-shrink: 0;
+      overflow: hidden;
+      max-height: 0;
+      transition: max-height 0.3s ease;
+    }
+    .compile-log.visible { max-height: 150px; }
+    .compile-log-header {
+      padding: 6px 12px;
+      font-size: 0.65rem;
+      font-family: 'IBM Plex Mono', monospace;
+      font-weight: 500;
+      color: #525252;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      background: #111111;
+      border-bottom: 1px solid #262626;
+    }
+    .compile-log-body {
+      padding: 8px 12px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: #525252;
+      overflow-y: auto;
+      max-height: 110px;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    /* ── Resizer ─────────────────────────────────────────── */
+    .resizer {
+      width: 4px;
+      background: #262626;
+      cursor: col-resize;
+      flex-shrink: 0;
+      transition: background 0.15s;
+    }
+    .resizer:hover, .resizer.dragging { background: #ff8a80; }
+
+    /* ── PDF panel ───────────────────────────────────────── */
+    .pdf-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      background: #0a0a0a;
+      overflow: hidden;
+    }
+    .pdf-toolbar {
+      padding: 6px 12px;
+      background: #111111;
+      border-bottom: 1px solid #262626;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .pdf-toolbar-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .pdf-toolbar h2 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      color: #fafafa;
+    }
+    .pdf-tab {
+      padding: 3px 10px;
+      font-size: 0.75rem;
+      font-family: 'IBM Plex Mono', monospace;
+      border: none;
+      border-radius: 0;
+      cursor: pointer;
+      background: transparent;
+      color: #525252;
+      font-weight: 500;
+    }
+    .pdf-tab:hover { color: #a3a3a3; }
+    .pdf-tab.active { background: #1a1a1a; color: #fafafa; }
+
+    .pdf-zoom-controls {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .zoom-btn {
+      width: 26px;
+      height: 26px;
+      border: 1px solid #262626;
+      border-radius: 0;
+      background: #1a1a1a;
+      color: #a3a3a3;
+      cursor: pointer;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .zoom-btn:hover { border-color: #ff8a80; }
+    .zoom-label {
+      font-size: 11px;
+      color: #525252;
+      min-width: 36px;
+      text-align: center;
+    }
+
+    .pdf-viewport {
+      flex: 1;
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      gap: 12px;
+      background: #0a0a0a;
+    }
+    .pdf-viewport canvas {
+      box-shadow: 0 2px 16px rgba(0,0,0,0.6);
+    }
+    .pdf-placeholder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #525252;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 14px;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .pdf-placeholder .shortcut-hint {
+      font-size: 12px;
+      color: #525252;
+    }
+  </style>
+</head>
+<body>
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <h1>Resume Tailor <span class="slug" id="slug-label"></span></h1>
+    </div>
+    <div class="toolbar-right">
+      <span id="status-pill" class="status-pill" style="display:none"></span>
+      <label class="toggle-label">
+        <input type="checkbox" id="auto-compile-toggle" /> Auto-compile
+      </label>
+      <button id="compile-btn" class="btn btn-compile">
+        Recompile <span class="kbd">&thinsp;&#8984;S&thinsp;</span>
+      </button>
+      <button id="compile-open-btn" class="btn btn-secondary">
+        Compile &amp; Open
+      </button>
+    </div>
+  </div>
+
+  <div class="layout">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-header">Files</div>
+      <ul class="file-list">
+        <li class="file-item active" data-file="resume">
+          <span class="file-icon">T</span>
+          <span class="file-name">resume.tex</span>
+          <span class="file-modified"></span>
+        </li>
+        <li class="file-item" data-file="cover-letter">
+          <span class="file-icon">T</span>
+          <span class="file-name">cover-letter.tex</span>
+          <span class="file-modified"></span>
+        </li>
+        <li class="file-item" data-file="email">
+          <span class="file-icon">M</span>
+          <span class="file-name">email-draft.md</span>
+          <span class="file-modified"></span>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Editor -->
+    <div class="editor-panel">
+      <div id="editor-resume" class="editor-pane"></div>
+      <div id="editor-cover-letter" class="editor-pane hidden"></div>
+      <div id="editor-email-wrap" class="email-editor-wrap hidden">
+        <textarea class="email-editor" id="email-textarea"></textarea>
+      </div>
+      <div id="compile-log" class="compile-log">
+        <div class="compile-log-header" id="log-toggle">
+          <span>Compile Log</span>
+          <span style="font-size:10px">click to toggle</span>
+        </div>
+        <div class="compile-log-body" id="compile-log-body"></div>
+      </div>
+    </div>
+
+    <!-- Resizer -->
+    <div class="resizer" id="resizer"></div>
+
+    <!-- PDF Preview -->
+    <div class="pdf-panel" id="pdf-panel">
+      <div class="pdf-toolbar">
+        <div class="pdf-toolbar-left">
+          <button class="pdf-tab active" data-pdf="resume">Resume</button>
+          <button class="pdf-tab" data-pdf="cover-letter">Cover Letter</button>
+        </div>
+        <div class="pdf-zoom-controls">
+          <button class="zoom-btn" id="zoom-out">-</button>
+          <span class="zoom-label" id="zoom-label">100%</span>
+          <button class="zoom-btn" id="zoom-in">+</button>
+          <button class="zoom-btn" id="zoom-fit" title="Fit width">&#8596;</button>
+        </div>
+      </div>
+      <div class="pdf-viewport" id="pdf-viewport">
+        <div class="pdf-placeholder" id="pdf-placeholder">
+          <span>Press Recompile or &#8984;S to preview</span>
+          <span class="shortcut-hint">Edit LaTeX on the left, see PDF here</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CodeMirror core + addons -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/mode/stex/stex.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/mode/markdown/markdown.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/edit/matchbrackets.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/edit/closebrackets.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/fold/foldcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/fold/foldgutter.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/fold/brace-fold.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/search/search.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/search/searchcursor.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/addon/dialog/dialog.min.js"></script>
+
+  <script type="module">
+    // ── pdf.js setup ──────────────────────────────────────
+    const pdfjsLib = await import("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.mjs");
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.mjs";
+
+    const API = "";
+    const jobId = new URLSearchParams(window.location.search).get("id");
+    let slug = "";
+    let activeFile = "resume";
+    let activePdf = "resume";
+    let zoomScale = 1.5;
+    let currentPdfDoc = null;
+    let autoCompile = false;
+    let compileTimeout = null;
+    let isCompiling = false;
+    let modified = { resume: false, "cover-letter": false, email: false };
+
+    // ── Editors ───────────────────────────────────────────
+    const cmOptions = {
+      theme: "one-dark",
+      lineNumbers: true,
+      lineWrapping: true,
+      matchBrackets: true,
+      autoCloseBrackets: true,
+      foldGutter: true,
+      gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
+      tabSize: 2,
+      indentWithTabs: false,
+      extraKeys: {
+        "Cmd-S": () => doCompile(),
+        "Ctrl-S": () => doCompile(),
+      },
+    };
+
+    const resumeEditor = CodeMirror(document.getElementById("editor-resume"), {
+      ...cmOptions, mode: "stex",
+    });
+    const coverEditor = CodeMirror(document.getElementById("editor-cover-letter"), {
+      ...cmOptions, mode: "stex",
+    });
+
+    // Track modifications
+    resumeEditor.on("change", () => { markModified("resume"); scheduleAutoCompile(); });
+    coverEditor.on("change", () => { markModified("cover-letter"); scheduleAutoCompile(); });
+    document.getElementById("email-textarea").addEventListener("input", () => {
+      markModified("email");
+    });
+
+    function markModified(file) {
+      modified[file] = true;
+      const el = document.querySelector(`.file-item[data-file="${file}"]`);
+      if (el) el.classList.add("modified");
+    }
+    function clearModified() {
+      Object.keys(modified).forEach(k => {
+        modified[k] = false;
+        const el = document.querySelector(`.file-item[data-file="${k}"]`);
+        if (el) el.classList.remove("modified");
+      });
+    }
+
+    // ── File sidebar ──────────────────────────────────────
+    document.querySelectorAll(".file-item").forEach(item => {
+      item.addEventListener("click", () => {
+        document.querySelectorAll(".file-item").forEach(i => i.classList.remove("active"));
+        item.classList.add("active");
+        switchFile(item.dataset.file);
+      });
+    });
+
+    function switchFile(file) {
+      activeFile = file;
+      document.getElementById("editor-resume").classList.toggle("hidden", file !== "resume");
+      document.getElementById("editor-cover-letter").classList.toggle("hidden", file !== "cover-letter");
+      document.getElementById("editor-email-wrap").classList.toggle("hidden", file !== "email");
+      if (file === "resume") resumeEditor.refresh();
+      if (file === "cover-letter") coverEditor.refresh();
+    }
+
+    // ── PDF tabs ──────────────────────────────────────────
+    document.querySelectorAll(".pdf-tab").forEach(tab => {
+      tab.addEventListener("click", () => {
+        document.querySelectorAll(".pdf-tab").forEach(t => t.classList.remove("active"));
+        tab.classList.add("active");
+        activePdf = tab.dataset.pdf;
+        renderCurrentPdf();
+      });
+    });
+
+    // ── Zoom ──────────────────────────────────────────────
+    document.getElementById("zoom-in").addEventListener("click", () => {
+      zoomScale = Math.min(zoomScale + 0.25, 4);
+      updateZoom();
+    });
+    document.getElementById("zoom-out").addEventListener("click", () => {
+      zoomScale = Math.max(zoomScale - 0.25, 0.5);
+      updateZoom();
+    });
+    document.getElementById("zoom-fit").addEventListener("click", () => {
+      zoomScale = -1; // sentinel for fit-width
+      updateZoom();
+    });
+    function updateZoom() {
+      document.getElementById("zoom-label").textContent =
+        zoomScale === -1 ? "Fit" : Math.round(zoomScale * 100) + "%";
+      if (currentPdfDoc) renderPdfPages(currentPdfDoc);
+    }
+
+    // ── PDF rendering with pdf.js ─────────────────────────
+    async function renderCurrentPdf() {
+      const type = activePdf;
+      const url = `${API}/files/${jobId}/${type}?t=${Date.now()}`;
+      const viewport = document.getElementById("pdf-viewport");
+      const placeholder = document.getElementById("pdf-placeholder");
+
+      try {
+        const loadingTask = pdfjsLib.getDocument(url);
+        const pdf = await loadingTask.promise;
+        currentPdfDoc = pdf;
+        placeholder.style.display = "none";
+        await renderPdfPages(pdf);
+      } catch (err) {
+        console.error("PDF load error:", err);
+        placeholder.style.display = "";
+        placeholder.querySelector("span").textContent = "PDF not available yet. Compile first.";
+      }
+    }
+
+    async function renderPdfPages(pdf) {
+      const viewport = document.getElementById("pdf-viewport");
+      // Clear old canvases
+      viewport.querySelectorAll("canvas").forEach(c => c.remove());
+
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+
+        let scale = zoomScale;
+        if (scale === -1) {
+          // Fit width
+          const panelWidth = document.getElementById("pdf-panel").clientWidth - 48;
+          const unscaledViewport = page.getViewport({ scale: 1 });
+          scale = panelWidth / unscaledViewport.width;
+        }
+
+        const vp = page.getViewport({ scale });
+        const canvas = document.createElement("canvas");
+        canvas.width = vp.width;
+        canvas.height = vp.height;
+        canvas.style.width = vp.width + "px";
+        canvas.style.height = vp.height + "px";
+        viewport.appendChild(canvas);
+
+        await page.render({ canvasContext: canvas.getContext("2d"), viewport: vp }).promise;
+      }
+    }
+
+    // ── Compile ───────────────────────────────────────────
+    const compileBtn = document.getElementById("compile-btn");
+    const statusPill = document.getElementById("status-pill");
+    const logBody = document.getElementById("compile-log-body");
+    const logEl = document.getElementById("compile-log");
+
+    // Cmd+S / Ctrl+S globally
+    document.addEventListener("keydown", (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+        e.preventDefault();
+        doCompile();
+      }
+    });
+
+    compileBtn.addEventListener("click", () => doCompile());
+    document.getElementById("compile-open-btn").addEventListener("click", () => doCompile(true));
+
+    async function doCompile(openPdfs = false) {
+      if (isCompiling) return;
+      isCompiling = true;
+      compileBtn.disabled = true;
+      compileBtn.innerHTML = 'Compiling&hellip;';
+      statusPill.style.display = "";
+      statusPill.className = "status-pill compiling";
+      statusPill.textContent = "Compiling";
+      logBody.textContent = "";
+      logEl.classList.add("visible");
+
+      try {
+        const res = await fetch(`${API}/api/compile/${jobId}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            resume: resumeEditor.getValue(),
+            coverLetter: coverEditor.getValue(),
+            email: document.getElementById("email-textarea").value,
+            openPdfs,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          statusPill.className = "status-pill success";
+          statusPill.textContent = "Success";
+          logBody.textContent = data.log || "Compilation successful.";
+          clearModified();
+          await renderCurrentPdf();
+        } else {
+          statusPill.className = "status-pill error";
+          statusPill.textContent = "Error";
+          logBody.textContent = data.log || data.error || "Compilation failed.";
+        }
+      } catch (err) {
+        statusPill.className = "status-pill error";
+        statusPill.textContent = "Error";
+        logBody.textContent = err.message;
+      }
+
+      isCompiling = false;
+      compileBtn.disabled = false;
+      compileBtn.innerHTML = 'Recompile <span class="kbd">&thinsp;&#8984;S&thinsp;</span>';
+    }
+
+    // ── Auto-compile ──────────────────────────────────────
+    document.getElementById("auto-compile-toggle").addEventListener("change", (e) => {
+      autoCompile = e.target.checked;
+    });
+    function scheduleAutoCompile() {
+      if (!autoCompile) return;
+      clearTimeout(compileTimeout);
+      compileTimeout = setTimeout(() => doCompile(), 3000);
+    }
+
+    // ── Log toggle ────────────────────────────────────────
+    document.getElementById("log-toggle").addEventListener("click", () => {
+      logEl.classList.toggle("visible");
+    });
+
+    // ── Resizer (drag to resize editor/pdf split) ─────────
+    const resizer = document.getElementById("resizer");
+    const editorPanel = document.querySelector(".editor-panel");
+    const pdfPanel = document.getElementById("pdf-panel");
+    let isResizing = false;
+
+    resizer.addEventListener("mousedown", (e) => {
+      isResizing = true;
+      resizer.classList.add("dragging");
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+      e.preventDefault();
+    });
+    document.addEventListener("mousemove", (e) => {
+      if (!isResizing) return;
+      const sidebar = document.querySelector(".sidebar");
+      const sidebarWidth = sidebar.getBoundingClientRect().width;
+      const resizerWidth = resizer.getBoundingClientRect().width;
+      const totalWidth = window.innerWidth - sidebarWidth - resizerWidth;
+      const editorWidth = e.clientX - sidebarWidth;
+      const ratio = Math.max(0.2, Math.min(0.8, editorWidth / totalWidth));
+      editorPanel.style.flex = `${ratio}`;
+      pdfPanel.style.flex = `${1 - ratio}`;
+    });
+    document.addEventListener("mouseup", () => {
+      if (isResizing) {
+        isResizing = false;
+        resizer.classList.remove("dragging");
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+        resumeEditor.refresh();
+        coverEditor.refresh();
+      }
+    });
+
+    // ── Load files ────────────────────────────────────────
+    async function loadFiles() {
+      const res = await fetch(`${API}/api/review/${jobId}`);
+      if (!res.ok) {
+        document.getElementById("pdf-placeholder").querySelector("span").textContent = "Failed to load.";
+        return;
+      }
+      const data = await res.json();
+      slug = data.slug;
+      document.getElementById("slug-label").textContent = `/ ${slug}`;
+      document.title = `Review - ${slug}`;
+
+      // Update file names in sidebar
+      const resumeItem = document.querySelector('[data-file="resume"] .file-name');
+      const coverItem = document.querySelector('[data-file="cover-letter"] .file-name');
+      if (resumeItem) resumeItem.textContent = `resume-${slug}.tex`;
+      if (coverItem) coverItem.textContent = `cover-letter-${slug}.tex`;
+
+      if (data.resume) resumeEditor.setValue(data.resume);
+      if (data.coverLetter) coverEditor.setValue(data.coverLetter);
+      if (data.email) document.getElementById("email-textarea").value = data.email;
+      clearModified();
+
+      if (data.hasPdfs) {
+        await renderCurrentPdf();
+      }
+    }
+
+    loadFiles();
+  </script>
+</body>
+</html>
