@@ -1,11 +1,11 @@
 {
   "manifest_version": 3,
-  "name": "Resume Tailor",
+  "name": "Tailor",
   "version": "1.0",
   "description": "Auto-tailor resume and cover letter for job applications",
   "permissions": ["activeTab", "scripting", "storage"],
   "action": {
-    "default_title": "Resume Tailor",
+    "default_title": "Tailor",
     "default_popup": "sidepanel.html"
   },
   "background": { "service_worker": "background.js" },
