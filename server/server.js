@@ -78,6 +78,8 @@ Bun.serve({
       const list = Array.from(jobs.values()).reverse().map((j) => ({
         jobId: j.jobId,
         slug: j.slug,
+        company: j.company || j.slug,
+        title: j.title || "",
         status: j.status,
         message: j.message,
         files: j.files,
@@ -85,6 +87,31 @@ Bun.serve({
         coverLetterFile: j.coverLetterFile || null,
       }));
       return json(list);
+    }
+
+    // GET /api/csv - Parse and return applications.csv as JSON
+    if (pathname === "/api/csv" && req.method === "GET") {
+      try {
+        if (!(await Bun.file(CSV_PATH).exists())) return json([]);
+        const text = await Bun.file(CSV_PATH).text();
+        const lines = text.trim().split("\n");
+        if (lines.length <= 1) return json([]);
+        const rows = lines.slice(1).map(line => {
+          const cols = parseCsvLine(line);
+          return {
+            company: cols[0] || "",
+            status: cols[1] || "",
+            role: cols[2] || "",
+            salary: cols[3] || "",
+            date: cols[4] || "",
+            link: cols[5] || "",
+            rejection: cols[6] || "",
+          };
+        });
+        return json(rows);
+      } catch {
+        return json([]);
+      }
     }
 
     // POST /generate
@@ -419,6 +446,26 @@ function updateJob(jobId, updates) {
 
 const CSV_PATH = path.join(PROJECT_ROOT, "applications.csv");
 const CSV_HEADER = "Company Name,Application Status,Role,Salary,Date Submitted,Link to Job Req,Rejection Reason";
+
+function parseCsvLine(line) {
+  const cols = [];
+  let cur = "";
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuotes) {
+      if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; }
+      else if (ch === '"') { inQuotes = false; }
+      else { cur += ch; }
+    } else {
+      if (ch === '"') { inQuotes = true; }
+      else if (ch === ',') { cols.push(cur); cur = ""; }
+      else { cur += ch; }
+    }
+  }
+  cols.push(cur);
+  return cols;
+}
 
 function csvEscape(val) {
   const s = String(val);
