@@ -20,8 +20,8 @@ body {
   background: #0a0a0a;
   color: #fafafa;
   line-height: 1.6;
-  width: 400px;
-  min-height: 500px;
+  width: 100%;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   -webkit-font-smoothing: antialiased;
