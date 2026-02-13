@@ -22,6 +22,7 @@
 
     // Buttons
     extractBtn: document.getElementById("extract-btn"),
+    clearBtn: document.getElementById("clear-btn"),
     generateBtn: document.getElementById("generate-btn"),
     newBtn: document.getElementById("new-btn"),
     copyEmailBtn: document.getElementById("copy-email-btn"),
@@ -112,6 +113,14 @@
   });
 
   // ── Event Listeners ──────────────────────────────────
+
+  els.clearBtn.addEventListener("click", () => {
+    els.companyInput.value = "";
+    els.titleInput.value = "";
+    els.linkInput.value = "";
+    els.descriptionInput.value = "";
+    chrome.storage.local.remove(STORAGE_KEY);
+  });
 
   els.extractBtn.addEventListener("click", () => {
     requestExtraction(false);
