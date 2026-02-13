@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Review Application</title>
+  <title>Tailor</title>
   <!-- CodeMirror core -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/codemirror.min.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/theme/one-dark.min.css" />
@@ -63,6 +63,7 @@
       font-weight: 600;
       color: #fafafa;
     }
+    .toolbar h1::before { content: '// '; color: #ff8a80; }
     .toolbar .slug {
       color: #525252;
       font-weight: 400;
@@ -86,28 +87,19 @@
       align-items: center;
       gap: 6px;
     }
-    .btn-compile {
-      background: #ff8a80;
-      color: #0a0a0a;
-      border: 1px solid #ff8a80;
+    .btn-compile, .btn-secondary {
+      background: transparent;
+      color: #a3a3a3;
+      border: 1px solid #262626;
       font-family: 'IBM Plex Mono', monospace;
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
-    .btn-compile:hover {
-      background: transparent;
-      color: #ff8a80;
-    }
-    .btn-compile:disabled { opacity: 0.4; cursor: not-allowed; }
-    .btn-secondary {
-      background: transparent;
-      border: 1px solid #262626;
-      color: #a3a3a3;
-    }
-    .btn-secondary:hover {
+    .btn-compile:hover, .btn-secondary:hover {
       border-color: #ff8a80;
       color: #ff8a80;
     }
+    .btn-compile:disabled { opacity: 0.4; cursor: not-allowed; }
 
     .status-pill {
       font-size: 11px;
@@ -400,7 +392,7 @@
   <!-- Toolbar -->
   <div class="toolbar">
     <div class="toolbar-left">
-      <h1>Resume Tailor <span class="slug" id="slug-label"></span></h1>
+      <a href="/" style="text-decoration:none"><h1>Tailor</h1></a> <span class="slug" id="slug-label"></span>
     </div>
     <div class="toolbar-right">
       <span id="status-pill" class="status-pill" style="display:none"></span>
