@@ -6,7 +6,7 @@ import { buildPrompt } from "./prompt-template.js";
 const __dirname = import.meta.dir;
 
 const PORT = 3847;
-const PROJECT_ROOT = "/Users/mirafreedhassan/projects/resume-cv";
+const PROJECT_ROOT = path.resolve(Bun.env.HOME, "projects/resume-cv");
 
 // Persistent job state store
 const JOBS_PATH = path.join(__dirname, "jobs.json");
@@ -59,6 +59,13 @@ Bun.serve({
     const url = new URL(req.url);
     const { pathname } = url;
 
+    // GET /favicon.svg
+    if (pathname === "/favicon.svg") {
+      return new Response(Bun.file(path.join(__dirname, "favicon.svg")), {
+        headers: { "Content-Type": "image/svg+xml", "Cache-Control": "public, max-age=86400" },
+      });
+    }
+
     // GET / - Dashboard
     if (pathname === "/" && req.method === "GET") {
       return new Response(Bun.file(path.join(__dirname, "dashboard.html")), {
@@ -85,8 +92,20 @@ Bun.serve({
         files: j.files,
         resumeFile: j.resumeFile || null,
         coverLetterFile: j.coverLetterFile || null,
+        emailed: j.emailed || false,
       }));
       return json(list);
+    }
+
+    // POST /api/jobs/:jobId/emailed - Toggle emailed status
+    if (pathname.match(/^\/api\/jobs\/[^/]+\/emailed$/) && req.method === "POST") {
+      const jobId = pathname.split("/")[3];
+      const job = jobs.get(jobId);
+      if (!job) return json({ error: "Job not found" }, 404);
+      const { emailed } = await req.json();
+      job.emailed = !!emailed;
+      saveJobs();
+      return json({ jobId, emailed: job.emailed });
     }
 
     // GET /api/csv - Parse and return applications.csv as JSON
@@ -109,7 +128,8 @@ Bun.serve({
           };
         });
         return json(rows);
-      } catch {
+      } catch (err) {
+        console.error("CSV parse error:", err);
         return json([]);
       }
     }
