@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Resume Tailor</title>
+  <link rel="stylesheet" href="sidepanel.css" />
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <h1 class="header-title">Resume Tailor</h1>
+  </header>
+
+  <main class="main">
+    <!-- Error Banner -->
+    <div id="error-banner" class="error-banner hidden">
+      <div class="error-content">
+        <span class="error-icon">!</span>
+        <span id="error-message">Something went wrong.</span>
+      </div>
+      <button id="error-retry-btn" class="btn btn-small btn-error">Retry</button>
+      <button id="error-dismiss-btn" class="btn-dismiss">&times;</button>
+    </div>
+
+    <!-- Input Section -->
+    <section id="input-section" class="section">
+      <div class="field">
+        <label for="company-input">Company Name</label>
+        <input type="text" id="company-input" placeholder="e.g. Acme Corp" />
+      </div>
+      <div class="field">
+        <label for="title-input">Job Title</label>
+        <input type="text" id="title-input" placeholder="e.g. Software Engineer" />
+      </div>
+      <div class="field">
+        <label for="link-input">Job Posting URL</label>
+        <input type="text" id="link-input" placeholder="https://..." />
+      </div>
+      <div class="field">
+        <label for="description-input">Job Description</label>
+        <textarea id="description-input" rows="10" placeholder="Paste or extract the job description..."></textarea>
+      </div>
+      <div class="actions">
+        <button id="extract-btn" class="btn btn-secondary">Extract from Page</button>
+        <button id="generate-btn" class="btn btn-primary">Generate Application</button>
+      </div>
+    </section>
+
+    <!-- Progress Section -->
+    <section id="progress-section" class="section hidden">
+      <h2 class="section-title">Generating your application&hellip;</h2>
+      <p id="elapsed-time" class="elapsed-time">0s elapsed</p>
+      <ul class="progress-steps">
+        <li id="step-extracting" class="step" data-status="pending">
+          <span class="step-icon"></span>
+          <span class="step-label">Extracting keywords</span>
+        </li>
+        <li id="step-generating" class="step" data-status="pending">
+          <span class="step-icon"></span>
+          <span class="step-label">Generating documents</span>
+        </li>
+        <li id="step-compiling" class="step" data-status="pending">
+          <span class="step-icon"></span>
+          <span class="step-label">Compiling PDFs</span>
+        </li>
+        <li id="step-done" class="step" data-status="pending">
+          <span class="step-icon"></span>
+          <span class="step-label">Done</span>
+        </li>
+      </ul>
+    </section>
+
+    <!-- Results Section -->
+    <section id="results-section" class="section hidden">
+      <h2 class="section-title">Your application is ready</h2>
+      <div class="result-cards">
+        <div class="result-card">
+          <div class="card-icon">&#128196;</div>
+          <div class="card-body">
+            <h3>Resume PDF</h3>
+            <p id="resume-filename" class="card-meta">resume.pdf</p>
+          </div>
+          <button id="open-resume-btn" class="btn btn-small btn-primary">Open PDF</button>
+        </div>
+        <div class="result-card">
+          <div class="card-icon">&#9993;</div>
+          <div class="card-body">
+            <h3>Cover Letter PDF</h3>
+            <p id="cover-filename" class="card-meta">cover-letter.pdf</p>
+          </div>
+          <button id="open-cover-btn" class="btn btn-small btn-primary">Open PDF</button>
+        </div>
+        <div class="result-card result-card-full">
+          <div class="card-header">
+            <div class="card-icon">&#128231;</div>
+            <h3>Email Draft</h3>
+            <button id="copy-email-btn" class="btn btn-small btn-secondary">Copy</button>
+          </div>
+          <pre id="email-draft" class="email-draft"></pre>
+        </div>
+      </div>
+      <div class="actions">
+        <button id="new-btn" class="btn btn-secondary">Start New</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="sidepanel.js"></script>
+</body>
+</html>
