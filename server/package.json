@@ -1,0 +1,14 @@
+{
+  "name": "resume-automation-server",
+  "version": "1.0.0",
+  "description": "Job application automation server - generates tailored resumes, cover letters, and cold emails",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "bun run server.js",
+    "dev": "bun --watch run server.js"
+  },
+  "dependencies": {
+    "slugify": "^1.6.6"
+  }
+}

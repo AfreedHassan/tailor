@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Resume Tailor</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'IBM Plex Mono', monospace;
+      background: #0a0a0a;
+      color: #fafafa;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.6;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 9999;
+      pointer-events: none;
+      opacity: 0.03;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      background-repeat: repeat;
+      background-size: 256px 256px;
+    }
+
+    .header {
+      width: 100%;
+      background: #111111;
+      border-bottom: 1px solid #262626;
+      padding: 16px 24px;
+      text-align: center;
+    }
+    .header h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 18px;
+      font-weight: 600;
+      color: #fafafa;
+    }
+    .header h1::before {
+      content: '// ';
+      color: #ff8a80;
+    }
+    .header p {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.75rem;
+      color: #525252;
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 640px;
+      padding: 24px 16px;
+    }
+
+    .empty {
+      text-align: center;
+      color: #525252;
+      font-family: 'IBM Plex Mono', monospace;
+      padding: 60px 0;
+      font-size: 14px;
+    }
+
+    .job-card {
+      background: #111111;
+      border: 1px solid #262626;
+      border-radius: 0;
+      padding: 16px 20px;
+      margin-bottom: 12px;
+      transition: border-color 0.15s, transform 0.15s;
+      animation: fadeIn 0.6s ease-out both;
+    }
+    .job-card:nth-child(1) { animation-delay: 0s; }
+    .job-card:nth-child(2) { animation-delay: 0.08s; }
+    .job-card:nth-child(3) { animation-delay: 0.16s; }
+    .job-card:nth-child(4) { animation-delay: 0.24s; }
+    .job-card:nth-child(5) { animation-delay: 0.32s; }
+    .job-card:nth-child(6) { animation-delay: 0.4s; }
+    .job-card:nth-child(7) { animation-delay: 0.48s; }
+    .job-card:nth-child(8) { animation-delay: 0.56s; }
+    .job-card:nth-child(9) { animation-delay: 0.64s; }
+    .job-card:nth-child(10) { animation-delay: 0.72s; }
+    .job-card:hover {
+      border-color: #ff8a80;
+      transform: translateY(-2px);
+    }
+
+    .job-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .job-slug {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 15px;
+      font-weight: 500;
+      color: #fafafa;
+    }
+
+    .badge {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.7rem;
+      padding: 3px 10px;
+      border-radius: 0;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .badge.processing { background: rgba(255, 138, 128, 0.1); color: #ff8a80; }
+    .badge.review { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+    .badge.compiling { background: rgba(255, 138, 128, 0.1); color: #ff8a80; }
+    .badge.complete { background: rgba(255, 138, 128, 0.1); color: #ff8a80; }
+    .badge.error { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+
+    .job-message {
+      font-size: 12px;
+      color: #a3a3a3;
+      margin-bottom: 12px;
+    }
+
+    .progress-bar-track {
+      width: 100%;
+      height: 4px;
+      background: #1a1a1a;
+      border-radius: 0;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 0;
+      transition: width 0.5s ease, background 0.3s;
+    }
+    .progress-bar-fill.processing {
+      width: 40%;
+      background: #ff8a80;
+      animation: pulse-bar 1.5s ease infinite;
+    }
+    .progress-bar-fill.review { width: 75%; background: #f59e0b; }
+    .progress-bar-fill.compiling {
+      width: 85%;
+      background: #ff8a80;
+      animation: pulse-bar 1.5s ease infinite;
+    }
+    .progress-bar-fill.complete { width: 100%; background: #ff8a80; }
+    .progress-bar-fill.error { width: 100%; background: #ef4444; }
+
+    .steps {
+      display: flex;
+      gap: 6px;
+    }
+    .step {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.75rem;
+      color: #525252;
+      padding: 6px 0;
+    }
+    .step.done { color: #ff8a80; }
+    .step.active { color: #ff8a80; }
+
+    .step-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 0;
+      background: #262626;
+      flex-shrink: 0;
+    }
+    .step.done .step-dot { background: #ff8a80; }
+    .step.active .step-dot {
+      background: #ff8a80;
+      animation: pulse-dot 1.2s ease infinite;
+    }
+
+    .job-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .btn {
+      font-family: 'IBM Plex Mono', monospace;
+      padding: 6px 14px;
+      border: 1px solid #262626;
+      border-radius: 0;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      background: transparent;
+      color: #fafafa;
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+    }
+    .btn:hover {
+      border-color: #ff8a80;
+      color: #ff8a80;
+    }
+    .btn-primary {
+      background: #ff8a80;
+      color: #0a0a0a;
+      border-color: #ff8a80;
+    }
+    .btn-primary:hover {
+      background: transparent;
+      color: #ff8a80;
+    }
+    .btn-secondary {
+      background: transparent;
+      color: #fafafa;
+      border-color: #262626;
+    }
+    .btn-secondary:hover {
+      border-color: #ff8a80;
+      color: #ff8a80;
+    }
+
+    @keyframes pulse-bar {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    @keyframes pulse-dot {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(255, 138, 128, 0.4); }
+      50% { box-shadow: 0 0 0 4px rgba(255, 138, 128, 0); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Resume Tailor</h1>
+    <p>Job application status dashboard</p>
+  </div>
+
+  <div class="container">
+    <div id="jobs"></div>
+  </div>
+
+  <script>
+    const API = "";
+
+    function stepClass(jobStatus, stepThreshold) {
+      const order = ["processing", "review", "compiling", "complete"];
+      const jobIdx = order.indexOf(jobStatus);
+      const stepIdx = order.indexOf(stepThreshold);
+      if (jobStatus === "error") return jobIdx >= stepIdx ? "done" : "";
+      if (jobIdx > stepIdx) return "done";
+      if (jobIdx === stepIdx) return "active";
+      return "";
+    }
+
+    let prevSnapshot = "";
+
+    function renderJob(job, isNew) {
+      const s = job.status;
+      const showReview = s === "review" || s === "complete";
+      const animStyle = isNew ? "" : ' style="animation:none"';
+
+      return `
+        <div class="job-card"${animStyle}>
+          <div class="job-top">
+            <span class="job-slug">${job.slug}</span>
+            <span class="badge ${s}">${s}</span>
+          </div>
+          <div class="job-message">${job.message || ""}</div>
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill ${s}"></div>
+          </div>
+          <div class="steps">
+            <div class="step ${stepClass(s, 'processing')}">
+              <span class="step-dot"></span> Generating
+            </div>
+            <div class="step ${stepClass(s, 'review')}">
+              <span class="step-dot"></span> Review
+            </div>
+            <div class="step ${stepClass(s, 'compiling')}">
+              <span class="step-dot"></span> Compiling
+            </div>
+            <div class="step ${stepClass(s, 'complete')}">
+              <span class="step-dot"></span> Done
+            </div>
+          </div>
+          ${showReview ? `
+            <div class="job-actions">
+              <a href="/review?id=${job.jobId}" class="btn btn-primary">Open Review</a>
+              ${s === "complete" ? `
+                <a href="/files/${job.jobId}/resume" target="_blank" class="btn btn-secondary">Resume PDF</a>
+                <a href="/files/${job.jobId}/cover-letter" target="_blank" class="btn btn-secondary">Cover Letter PDF</a>
+              ` : ""}
+            </div>
+          ` : ""}
+        </div>
+      `;
+    }
+
+    async function poll() {
+      try {
+        const res = await fetch(`${API}/api/jobs`);
+        const jobs = await res.json();
+        const container = document.getElementById("jobs");
+
+        if (jobs.length === 0) {
+          container.innerHTML = '<div class="empty">No jobs yet. Use the extension to start one.</div>';
+          prevSnapshot = "";
+          return;
+        }
+
+        const snapshot = JSON.stringify(jobs);
+        if (snapshot === prevSnapshot) return;
+
+        const isFirstRender = prevSnapshot === "";
+        prevSnapshot = snapshot;
+
+        container.innerHTML = jobs.map(j => renderJob(j, isFirstRender)).join("");
+      } catch (err) {
+        console.error("Poll error:", err);
+      }
+    }
+
+    poll();
+    setInterval(poll, 2000);
+  </script>
+</body>
+</html>
